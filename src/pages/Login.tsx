@@ -20,10 +20,15 @@ const Login = () => {
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user && profile && !loading) {
+    console.log("Login page - Auth state:", { user: !!user, profile: !!profile, loading });
+    
+    if (!loading && user && profile) {
+      console.log("Redirecting user:", profile);
       if (profile.is_super_admin) {
+        console.log("Redirecting to admin dashboard");
         navigate("/admin");
       } else {
+        console.log("Redirecting to products list");
         navigate("/pages/products-list");
       }
     }
@@ -36,12 +41,17 @@ const Login = () => {
     }
 
     setIsLoading(true);
+    console.log("Attempting login for:", email);
+    
     const { error } = await signIn(email, password);
     
     if (error) {
+      console.error("Login error:", error);
       toast.error(error.message);
     } else {
+      console.log("Login successful, waiting for auth state update...");
       toast.success("Logged in successfully!");
+      // Don't navigate here - let the useEffect handle it after profile loads
     }
     setIsLoading(false);
   };
