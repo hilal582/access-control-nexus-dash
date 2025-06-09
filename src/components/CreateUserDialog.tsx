@@ -4,33 +4,44 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
-import { toast } from "sonner";
+import { useCreateUser } from "@/hooks/useUsers";
 
-const CreateUserDialog = ({ isOpen, onClose }) => {
+interface CreateUserDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const CreateUserDialog = ({ isOpen, onClose }: CreateUserDialogProps) => {
   const [formData, setFormData] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
+    password: "",
   });
-  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const createUserMutation = useCreateUser();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      toast.success("User created successfully! Password sent to email.");
-      setFormData({ name: "", email: "" });
+    try {
+      await createUserMutation.mutateAsync({
+        email: formData.email,
+        password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+      });
+      
+      setFormData({ firstName: "", lastName: "", email: "", password: "" });
       onClose();
-    }, 1000);
+    } catch (error) {
+      console.error("Error creating user:", error);
+    }
   };
 
   const generatePassword = () => {
     const password = Math.random().toString(36).slice(-8) + "A1!";
-    toast.info(`Generated password: ${password}`, {
-      duration: 5000,
-    });
+    setFormData(prev => ({ ...prev, password }));
   };
 
   return (
@@ -39,21 +50,34 @@ const CreateUserDialog = ({ isOpen, onClose }) => {
         <DialogHeader>
           <DialogTitle>Create New User</DialogTitle>
           <DialogDescription>
-            Add a new user to the system. A strong password will be auto-generated and sent to their email.
+            Add a new user to the system. They will receive login credentials via email.
           </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Full Name</Label>
-            <Input
-              id="name"
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="Enter full name"
-              required
-            />
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First Name</Label>
+              <Input
+                id="firstName"
+                type="text"
+                value={formData.firstName}
+                onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                placeholder="Enter first name"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last Name</Label>
+              <Input
+                id="lastName"
+                type="text"
+                value={formData.lastName}
+                onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                placeholder="Enter last name"
+                required
+              />
+            </div>
           </div>
           
           <div className="space-y-2">
@@ -68,23 +92,35 @@ const CreateUserDialog = ({ isOpen, onClose }) => {
             />
           </div>
 
-          <div className="flex items-center justify-between pt-2">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={generatePassword}
-              size="sm"
-            >
-              Preview Password
-            </Button>
-            <p className="text-xs text-gray-500">
-              Password will be auto-generated
-            </p>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <div className="flex space-x-2">
+              <Input
+                id="password"
+                type="text"
+                value={formData.password}
+                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                placeholder="Enter password"
+                required
+              />
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={generatePassword}
+                size="sm"
+              >
+                Generate
+              </Button>
+            </div>
           </div>
 
           <div className="flex space-x-3 pt-4">
-            <Button type="submit" disabled={loading} className="flex-1">
-              {loading ? "Creating..." : "Create User"}
+            <Button 
+              type="submit" 
+              disabled={createUserMutation.isPending} 
+              className="flex-1"
+            >
+              {createUserMutation.isPending ? "Creating..." : "Create User"}
             </Button>
             <Button type="button" variant="outline" onClick={onClose} className="flex-1">
               Cancel
