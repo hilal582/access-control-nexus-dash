@@ -1,134 +1,73 @@
+# Welcome to your Lovable project
 
-# Super Admin Dashboard
+## Project info
 
-A comprehensive user management system built with React, TypeScript, and Supabase.
+**URL**: https://lovable.dev/projects/45a296aa-4fa4-445f-8b1e-52cd4a11692a
 
-## Features
+## How can I edit this code?
 
-- 🔐 **Authentication System**: Sign up, sign in, and role-based access
-- 👥 **User Management**: Create, view, and manage user accounts
-- 🛡️ **Permission System**: Granular page-level permissions (view, edit, create, delete)
-- 👑 **Super Admin**: Special admin role with full system access
-- 💬 **Comment System**: Page-specific comments with modification history
-- 🎨 **Modern UI**: Built with shadcn/ui components and Tailwind CSS
+There are several ways of editing your application.
 
-## Getting Started
+**Use Lovable**
 
-### Prerequisites
+Simply visit the [Lovable Project](https://lovable.dev/projects/45a296aa-4fa4-445f-8b1e-52cd4a11692a) and start prompting.
 
-- Node.js 18+ 
-- A Supabase account and project
+Changes made via Lovable will be committed automatically to this repo.
 
-### Installation
+**Use your preferred IDE**
 
-1. **Clone the repository**:
-   ```bash
-   git clone <your-repo-url>
-   cd super-admin-dashboard
-   ```
+If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
 
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
+The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
-3. **Set up Supabase**:
-   - Your project is already connected to Supabase
-   - The database tables have been created
-   - Authentication is configured
+Follow these steps:
 
-4. **Start the development server**:
-   ```bash
-   npm run dev
-   ```
+```sh
+# Step 1: Clone the repository using the project's Git URL.
+git clone <YOUR_GIT_URL>
 
-5. **Open your browser**:
-   Navigate to `http://localhost:5173`
+# Step 2: Navigate to the project directory.
+cd <YOUR_PROJECT_NAME>
 
-## Usage
+# Step 3: Install the necessary dependencies.
+npm i
 
-### Creating Your First Super Admin
-
-1. Go to the login page and create a new account
-2. Go to your Supabase dashboard: [https://supabase.com/dashboard/project/ygbxbnnbykcxzcesjeob](https://supabase.com/dashboard/project/ygbxbnnbykcxzcesjeob)
-3. Navigate to Table Editor > profiles
-4. Find your user record and set `is_super_admin` to `true`
-5. Log out and log back in to see admin features
-
-### User Management
-
-- **Super Admins** can:
-  - View all users
-  - Create new users
-  - Manage user permissions
-  - Promote users to super admin
-  - Access all pages and features
-
-- **Regular Users** can:
-  - Access pages based on their permissions
-  - View and create comments (based on permissions)
-
-### Permission System
-
-The system supports 4 permission levels for each page:
-- **View**: Can see the page content
-- **Edit**: Can modify existing content
-- **Create**: Can add new content
-- **Delete**: Can remove content
-
-### Available Pages
-
-- Products List
-- Marketing List
-- Order List
-- Media Plans
-- Offer Pricing SKUs
-- Clients
-- Suppliers
-- Customer Support
-- Sales Reports
-- Finance & Accounting
-
-## Development
-
-### Project Structure
-
-```
-src/
-├── components/          # Reusable UI components
-├── hooks/              # Custom React hooks
-├── pages/              # Page components
-├── integrations/       # Supabase integration
-└── lib/               # Utility functions
+# Step 4: Start the development server with auto-reloading and an instant preview.
+npm run dev
 ```
 
-### Key Technologies
+**Edit a file directly in GitHub**
 
-- **React 18** with TypeScript
-- **Supabase** for backend and authentication
-- **Tanstack Query** for data fetching
-- **shadcn/ui** for UI components
-- **Tailwind CSS** for styling
-- **React Router** for navigation
+- Navigate to the desired file(s).
+- Click the "Edit" button (pencil icon) at the top right of the file view.
+- Make your changes and commit the changes.
 
-## Deployment
+**Use GitHub Codespaces**
 
-This app can be deployed to any static hosting platform:
+- Navigate to the main page of your repository.
+- Click on the "Code" button (green button) near the top right.
+- Select the "Codespaces" tab.
+- Click on "New codespace" to launch a new Codespace environment.
+- Edit files directly within the Codespace and commit and push your changes once you're done.
 
-1. **Build the project**:
-   ```bash
-   npm run build
-   ```
+## What technologies are used for this project?
 
-2. **Deploy the `dist` folder** to your hosting platform of choice
+This project is built with:
 
-## Environment Variables
+- Vite
+- TypeScript
+- React
+- shadcn-ui
+- Tailwind CSS
 
-No environment variables are needed as the Supabase configuration is already set up.
+## How can I deploy this project?
 
-## Support
+Simply open [Lovable](https://lovable.dev/projects/45a296aa-4fa4-445f-8b1e-52cd4a11692a) and click on Share -> Publish.
 
-For questions or issues, please check:
-- [Supabase Documentation](https://supabase.com/docs)
-- [React Documentation](https://react.dev)
-- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
+## Can I connect a custom domain to my Lovable project?
+
+Yes, you can!
+
+To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+
+Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
