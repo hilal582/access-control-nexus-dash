@@ -4,33 +4,40 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
-import { toast } from "sonner";
+import { useUsers } from "@/hooks/useUsers";
 
-const CreateUserDialog = ({ isOpen, onClose }) => {
+interface CreateUserDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const CreateUserDialog = ({ isOpen, onClose }: CreateUserDialogProps) => {
   const [formData, setFormData] = useState({
-    name: "",
+    first_name: "",
+    last_name: "",
     email: "",
+    password: "",
   });
   const [loading, setLoading] = useState(false);
+  const { createUser } = useUsers();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      toast.success("User created successfully! Password sent to email.");
-      setFormData({ name: "", email: "" });
+    const result = await createUser(formData);
+    
+    if (result.success) {
+      setFormData({ first_name: "", last_name: "", email: "", password: "" });
       onClose();
-    }, 1000);
+    }
+    
+    setLoading(false);
   };
 
   const generatePassword = () => {
     const password = Math.random().toString(36).slice(-8) + "A1!";
-    toast.info(`Generated password: ${password}`, {
-      duration: 5000,
-    });
+    setFormData(prev => ({ ...prev, password }));
   };
 
   return (
@@ -39,19 +46,31 @@ const CreateUserDialog = ({ isOpen, onClose }) => {
         <DialogHeader>
           <DialogTitle>Create New User</DialogTitle>
           <DialogDescription>
-            Add a new user to the system. A strong password will be auto-generated and sent to their email.
+            Add a new user to the system. They will receive login credentials via email.
           </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Full Name</Label>
+            <Label htmlFor="first_name">First Name</Label>
             <Input
-              id="name"
+              id="first_name"
               type="text"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="Enter full name"
+              value={formData.first_name}
+              onChange={(e) => setFormData(prev => ({ ...prev, first_name: e.target.value }))}
+              placeholder="Enter first name"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="last_name">Last Name</Label>
+            <Input
+              id="last_name"
+              type="text"
+              value={formData.last_name}
+              onChange={(e) => setFormData(prev => ({ ...prev, last_name: e.target.value }))}
+              placeholder="Enter last name"
               required
             />
           </div>
@@ -68,6 +87,18 @@ const CreateUserDialog = ({ isOpen, onClose }) => {
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="text"
+              value={formData.password}
+              onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+              placeholder="Enter password"
+              required
+            />
+          </div>
+
           <div className="flex items-center justify-between pt-2">
             <Button 
               type="button" 
@@ -75,11 +106,8 @@ const CreateUserDialog = ({ isOpen, onClose }) => {
               onClick={generatePassword}
               size="sm"
             >
-              Preview Password
+              Generate Password
             </Button>
-            <p className="text-xs text-gray-500">
-              Password will be auto-generated
-            </p>
           </div>
 
           <div className="flex space-x-3 pt-4">

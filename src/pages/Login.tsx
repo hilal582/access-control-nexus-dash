@@ -4,29 +4,57 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { signIn, user, profile, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
 
-  const handleLogin = async (userType: string) => {
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      toast.success(`Logged in as ${userType}`);
-      if (userType === "admin") {
+  useEffect(() => {
+    if (user && profile) {
+      if (profile.is_super_admin) {
         navigate("/admin");
       } else {
         navigate("/pages/products-list");
       }
-    }, 1000);
+    }
+  }, [user, profile, navigate]);
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      toast.error("Please enter both email and password");
+      return;
+    }
+
+    setLoginLoading(true);
+    const result = await signIn(email, password);
+    
+    if (result.success) {
+      toast.success("Logged in successfully!");
+      // Navigation will be handled by the useEffect above
+    } else {
+      toast.error(result.error || "Login failed");
+    }
+    
+    setLoginLoading(false);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -38,71 +66,37 @@ const Login = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="admin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="admin">Super Admin</TabsTrigger>
-              <TabsTrigger value="user">Regular User</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="admin" className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="admin-email">Email</Label>
-                <Input
-                  id="admin-email"
-                  type="email"
-                  placeholder="admin@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="admin-password">Password</Label>
-                <Input
-                  id="admin-password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-              <Button 
-                className="w-full" 
-                onClick={() => handleLogin("admin")}
-                disabled={loading}
-              >
-                {loading ? "Signing in..." : "Sign in as Admin"}
-              </Button>
-            </TabsContent>
-            
-            <TabsContent value="user" className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="user-email">Email</Label>
-                <Input
-                  id="user-email"
-                  type="email"
-                  placeholder="user@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="user-password">Password</Label>
-                <Input
-                  id="user-password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-              <Button 
-                className="w-full" 
-                variant="outline"
-                onClick={() => handleLogin("user")}
-                disabled={loading}
-              >
-                {loading ? "Signing in..." : "Sign in as User"}
-              </Button>
-            </TabsContent>
-          </Tabs>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+              />
+            </div>
+            <Button 
+              className="w-full" 
+              onClick={handleLogin}
+              disabled={loginLoading}
+            >
+              {loginLoading ? "Signing in..." : "Sign In"}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -6,11 +6,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
-import { toast } from "sonner";
+import { useState, useEffect } from "react";
+import { useUsers } from "@/hooks/useUsers";
 
-const UserPermissionPanel = ({ isOpen, onClose, user }) => {
-  const [permissions, setPermissions] = useState(user?.permissions || {});
+interface UserPermissionPanelProps {
+  isOpen: boolean;
+  onClose: () => void;
+  user: any;
+}
+
+const UserPermissionPanel = ({ isOpen, onClose, user }: UserPermissionPanelProps) => {
+  const [permissions, setPermissions] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
+  const { updateUserPermissions } = useUsers();
 
   const pages = [
     { key: "products-list", name: "Products List" },
@@ -27,16 +35,30 @@ const UserPermissionPanel = ({ isOpen, onClose, user }) => {
 
   const permissionLevels = ["View", "Edit", "Create", "Delete"];
 
-  const handlePermissionChange = (pageKey, permission) => {
+  useEffect(() => {
+    if (user?.permissions) {
+      setPermissions(user.permissions);
+    }
+  }, [user]);
+
+  const handlePermissionChange = (pageKey: string, permission: string) => {
     setPermissions(prev => ({
       ...prev,
       [pageKey]: permission
     }));
   };
 
-  const handleSave = () => {
-    toast.success("User permissions updated successfully");
-    onClose();
+  const handleSave = async () => {
+    if (!user?.id) return;
+    
+    setLoading(true);
+    const result = await updateUserPermissions(user.id, permissions);
+    
+    if (result.success) {
+      onClose();
+    }
+    
+    setLoading(false);
   };
 
   if (!user) return null;
@@ -61,7 +83,7 @@ const UserPermissionPanel = ({ isOpen, onClose, user }) => {
               <Avatar>
                 <AvatarImage src="/placeholder.svg" />
                 <AvatarFallback>
-                  {user.name.split(' ').map(n => n[0]).join('')}
+                  {user.name.split(' ').map((n: string) => n[0]).join('')}
                 </AvatarFallback>
               </Avatar>
               <div>
@@ -104,8 +126,8 @@ const UserPermissionPanel = ({ isOpen, onClose, user }) => {
 
         {/* Actions */}
         <div className="flex space-x-3 mt-8">
-          <Button onClick={handleSave} className="flex-1">
-            Save Changes
+          <Button onClick={handleSave} disabled={loading} className="flex-1">
+            {loading ? "Saving..." : "Save Changes"}
           </Button>
           <Button variant="outline" onClick={onClose} className="flex-1">
             Cancel
