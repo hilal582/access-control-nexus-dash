@@ -1,16 +1,23 @@
-
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
-import { toast } from "sonner";
+import { useState, useEffect } from "react";
+import { useUsers } from "@/hooks/useUsers";
 
-const UserPermissionPanel = ({ isOpen, onClose, user }) => {
-  const [permissions, setPermissions] = useState(user?.permissions || {});
+interface UserPermissionPanelProps {
+  isOpen: boolean;
+  onClose: () => void;
+  user: any;
+}
+
+const UserPermissionPanel = ({ isOpen, onClose, user }: UserPermissionPanelProps) => {
+  const [permissions, setPermissions] = useState<Record<string, string[]>>({});
+  const [loading, setLoading] = useState(false);
+  const { updateUserPermissions } = useUsers();
 
   const pages = [
     { key: "products-list", name: "Products List" },
@@ -25,18 +32,47 @@ const UserPermissionPanel = ({ isOpen, onClose, user }) => {
     { key: "finance", name: "Finance & Accounting" }
   ];
 
-  const permissionLevels = ["View", "Edit", "Create", "Delete"];
+  const permissionLevels = ["view", "edit", "create", "delete"];
 
-  const handlePermissionChange = (pageKey, permission) => {
-    setPermissions(prev => ({
-      ...prev,
-      [pageKey]: permission
-    }));
+  useEffect(() => {
+    if (user?.permissions) {
+      setPermissions(user.permissions);
+    }
+  }, [user]);
+
+  const handlePermissionChange = (pageKey: string, permission: string, checked: boolean) => {
+    setPermissions(prev => {
+      const newPermissions = { ...prev };
+      if (!newPermissions[pageKey]) {
+        newPermissions[pageKey] = [];
+      }
+      
+      if (checked) {
+        if (!newPermissions[pageKey].includes(permission)) {
+          newPermissions[pageKey] = [...newPermissions[pageKey], permission];
+        }
+      } else {
+        newPermissions[pageKey] = newPermissions[pageKey].filter(p => p !== permission);
+        if (newPermissions[pageKey].length === 0) {
+          delete newPermissions[pageKey];
+        }
+      }
+      
+      return newPermissions;
+    });
   };
 
-  const handleSave = () => {
-    toast.success("User permissions updated successfully");
-    onClose();
+  const handleSave = async () => {
+    if (!user?.id) return;
+    
+    setLoading(true);
+    const result = await updateUserPermissions(user.id, permissions);
+    
+    if (result.success) {
+      onClose();
+    }
+    
+    setLoading(false);
   };
 
   if (!user) return null;
@@ -61,7 +97,7 @@ const UserPermissionPanel = ({ isOpen, onClose, user }) => {
               <Avatar>
                 <AvatarImage src="/placeholder.svg" />
                 <AvatarFallback>
-                  {user.name.split(' ').map(n => n[0]).join('')}
+                  {user.name.split(' ').map((n: string) => n[0]).join('')}
                 </AvatarFallback>
               </Avatar>
               <div>
@@ -76,36 +112,42 @@ const UserPermissionPanel = ({ isOpen, onClose, user }) => {
         </Card>
 
         {/* Permissions */}
-        <div className="space-y-4">
+        <div className="space-y-6">
           <h3 className="text-lg font-semibold">Page Permissions</h3>
           {pages.map((page) => (
-            <div key={page.key} className="space-y-2">
-              <Label htmlFor={page.key} className="text-sm font-medium">
-                {page.name}
-              </Label>
-              <Select
-                value={permissions[page.key] || "View"}
-                onValueChange={(value) => handlePermissionChange(page.key, value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select permission level" />
-                </SelectTrigger>
-                <SelectContent>
-                  {permissionLevels.map((level) => (
-                    <SelectItem key={level} value={level}>
-                      {level}
-                    </SelectItem>
+            <Card key={page.key}>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">{page.name}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-3">
+                  {permissionLevels.map((permission) => (
+                    <div key={permission} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`${page.key}-${permission}`}
+                        checked={permissions[page.key]?.includes(permission) || false}
+                        onCheckedChange={(checked) => 
+                          handlePermissionChange(page.key, permission, checked as boolean)
+                        }
+                      />
+                      <Label 
+                        htmlFor={`${page.key}-${permission}`}
+                        className="text-sm font-medium capitalize"
+                      >
+                        {permission}
+                      </Label>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
 
         {/* Actions */}
         <div className="flex space-x-3 mt-8">
-          <Button onClick={handleSave} className="flex-1">
-            Save Changes
+          <Button onClick={handleSave} disabled={loading} className="flex-1">
+            {loading ? "Saving..." : "Save Changes"}
           </Button>
           <Button variant="outline" onClick={onClose} className="flex-1">
             Cancel

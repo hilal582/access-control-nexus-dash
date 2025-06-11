@@ -1,63 +1,15 @@
-
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Edit } from "lucide-react";
+import { useUsers, type User } from "@/hooks/useUsers";
 
-const UserRoleTable = ({ onEditUser }) => {
-  const users = [
-    {
-      id: 1,
-      name: "John Doe",
-      email: "john@example.com",
-      permissions: {
-        "products-list": "Edit",
-        "marketing-list": "View",
-        "order-list": "Create",
-        "media-plans": "Delete",
-        "offer-pricing": "View",
-        "clients": "Edit",
-        "suppliers": "View",
-        "customer-support": "Create",
-        "sales-reports": "View",
-        "finance": "View"
-      }
-    },
-    {
-      id: 2,
-      name: "Jane Smith",
-      email: "jane@example.com",
-      permissions: {
-        "products-list": "View",
-        "marketing-list": "Edit",
-        "order-list": "View",
-        "media-plans": "Create",
-        "offer-pricing": "Edit",
-        "clients": "View",
-        "suppliers": "Create",
-        "customer-support": "Delete",
-        "sales-reports": "Edit",
-        "finance": "View"
-      }
-    },
-    {
-      id: 3,
-      name: "Mike Johnson",
-      email: "mike@example.com",
-      permissions: {
-        "products-list": "Create",
-        "marketing-list": "View",
-        "order-list": "Edit",
-        "media-plans": "View",
-        "offer-pricing": "Create",
-        "clients": "Delete",
-        "suppliers": "Edit",
-        "customer-support": "View",
-        "sales-reports": "Create",
-        "finance": "Edit"
-      }
-    }
-  ];
+interface UserRoleTableProps {
+  onEditUser: (user: any) => void;
+}
+
+const UserRoleTable = ({ onEditUser }: UserRoleTableProps) => {
+  const { users, loading, getUserPermissions } = useUsers();
 
   const pages = [
     { key: "products-list", name: "Products" },
@@ -72,15 +24,41 @@ const UserRoleTable = ({ onEditUser }) => {
     { key: "finance", name: "Finance" }
   ];
 
-  const getPermissionColor = (permission) => {
-    switch (permission) {
-      case "View": return "bg-blue-100 text-blue-800";
-      case "Edit": return "bg-yellow-100 text-yellow-800";
-      case "Create": return "bg-green-100 text-green-800";
-      case "Delete": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
-    }
+  const getPermissionBadge = (permissions: string[]) => {
+    if (permissions.length === 0) return <Badge variant="secondary" className="bg-gray-100 text-gray-600">None</Badge>;
+    
+    const highestPermission = permissions.includes('delete') ? 'delete' :
+                             permissions.includes('create') ? 'create' :
+                             permissions.includes('edit') ? 'edit' : 'view';
+    
+    const colors = {
+      view: "bg-blue-100 text-blue-800",
+      edit: "bg-yellow-100 text-yellow-800", 
+      create: "bg-green-100 text-green-800",
+      delete: "bg-red-100 text-red-800"
+    };
+
+    return (
+      <Badge variant="secondary" className={colors[highestPermission as keyof typeof colors]}>
+        {highestPermission.charAt(0).toUpperCase() + highestPermission.slice(1)}
+      </Badge>
+    );
   };
+
+  const handleEditUser = (user: User) => {
+    const userPermissions = getUserPermissions(user.id);
+    
+    onEditUser({
+      id: user.id,
+      name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown User',
+      email: user.email,
+      permissions: userPermissions
+    });
+  };
+
+  if (loading) {
+    return <div className="text-center py-4">Loading users...</div>;
+  }
 
   return (
     <div className="overflow-x-auto">
@@ -97,35 +75,46 @@ const UserRoleTable = ({ onEditUser }) => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {users.map((user) => (
-            <TableRow key={user.id} className="hover:bg-gray-50">
-              <TableCell>
-                <div>
-                  <p className="font-medium">{user.name}</p>
-                  <p className="text-sm text-gray-500">{user.email}</p>
-                </div>
-              </TableCell>
-              {pages.map((page) => (
-                <TableCell key={page.key} className="text-center">
-                  <Badge 
-                    variant="secondary" 
-                    className={getPermissionColor(user.permissions[page.key])}
-                  >
-                    {user.permissions[page.key]}
-                  </Badge>
+          {users.map((user) => {
+            const userPermissions = getUserPermissions(user.id);
+            
+            return (
+              <TableRow key={user.id} className="hover:bg-gray-50">
+                <TableCell>
+                  <div>
+                    <p className="font-medium">
+                      {`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown User'}
+                    </p>
+                    <p className="text-sm text-gray-500">{user.email}</p>
+                    {user.is_super_admin && (
+                      <Badge variant="secondary" className="bg-purple-100 text-purple-800 mt-1">
+                        Super Admin
+                      </Badge>
+                    )}
+                  </div>
                 </TableCell>
-              ))}
-              <TableCell>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => onEditUser(user)}
-                >
-                  <Edit className="w-4 h-4" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
+                {pages.map((page) => {
+                  const permissions = userPermissions[page.key] || [];
+                  return (
+                    <TableCell key={page.key} className="text-center">
+                      {getPermissionBadge(permissions)}
+                    </TableCell>
+                  );
+                })}
+                <TableCell>
+                  {!user.is_super_admin && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleEditUser(user)}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                  )}
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>

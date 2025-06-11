@@ -1,6 +1,7 @@
-
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+import secrets
+import string
 
 class User(AbstractUser):
     email = models.EmailField(unique=True)
@@ -13,6 +14,13 @@ class User(AbstractUser):
     
     def __str__(self):
         return self.email
+    
+    @staticmethod
+    def generate_strong_password(length=12):
+        """Generate a strong password with uppercase, lowercase, digits, and symbols"""
+        alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+        password = ''.join(secrets.choice(alphabet) for i in range(length))
+        return password
 
 class UserPermission(models.Model):
     PERMISSION_CHOICES = [
@@ -45,3 +53,17 @@ class UserPermission(models.Model):
     
     def __str__(self):
         return f"{self.user.email} - {self.page} - {self.permission}"
+
+class PasswordResetOTP(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    otp = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_used = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return f"OTP for {self.user.email}"
+    
+    @staticmethod
+    def generate_otp():
+        """Generate a 6-digit OTP"""
+        return ''.join(secrets.choice(string.digits) for _ in range(6))
