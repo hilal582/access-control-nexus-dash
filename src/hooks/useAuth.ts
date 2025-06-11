@@ -29,11 +29,12 @@ export const useAuth = () => {
         throw error;
       }
       
-      console.log('Profile fetched:', data);
+      console.log('Profile fetched successfully:', data);
       setProfile(data);
       return data;
     } catch (error) {
       console.error('Error fetching profile:', error);
+      setProfile(null);
       return null;
     }
   };
@@ -51,11 +52,12 @@ export const useAuth = () => {
         throw error;
       }
 
-      console.log('Sign in successful:', data);
+      console.log('Sign in successful, user:', data.user);
       
       // Fetch profile immediately after successful login
       if (data.user) {
-        await fetchProfile(data.user.id);
+        const profileData = await fetchProfile(data.user.id);
+        console.log('Profile loaded after sign in:', profileData);
       }
       
       return { success: true };
@@ -78,27 +80,37 @@ export const useAuth = () => {
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session:', session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id).finally(() => setLoading(false));
-      } else {
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Initial session:', session);
+        
+        if (session?.user) {
+          setUser(session.user);
+          await fetchProfile(session.user.id);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+      } finally {
         setLoading(false);
       }
-    });
+    };
+
+    initializeAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session);
-        setUser(session?.user ?? null);
+        console.log('Auth state changed:', event, 'session:', session);
         
         if (session?.user) {
+          setUser(session.user);
           await fetchProfile(session.user.id);
         } else {
+          setUser(null);
           setProfile(null);
         }
+        
         setLoading(false);
       }
     );
@@ -106,7 +118,7 @@ export const useAuth = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  return {
+  const returnValues = {
     user,
     profile,
     loading,
@@ -115,4 +127,7 @@ export const useAuth = () => {
     isAuthenticated: !!user,
     isSuperAdmin: profile?.is_super_admin || false
   };
+
+  console.log('useAuth return values:', returnValues);
+  return returnValues;
 };

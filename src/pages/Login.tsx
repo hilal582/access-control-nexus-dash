@@ -16,17 +16,18 @@ const Login = () => {
   const [loginLoading, setLoginLoading] = useState(false);
 
   useEffect(() => {
-    if (user && !loading) {
-      // Give a small delay to ensure profile is loaded
-      const timer = setTimeout(() => {
-        if (profile?.is_super_admin) {
-          navigate("/admin");
-        } else {
-          navigate("/pages/products-list");
-        }
-      }, 100);
-
-      return () => clearTimeout(timer);
+    console.log('Login useEffect - user:', user, 'profile:', profile, 'loading:', loading);
+    
+    if (user && profile && !loading) {
+      console.log('Redirecting user - is_super_admin:', profile.is_super_admin);
+      
+      if (profile.is_super_admin) {
+        console.log('Redirecting to admin dashboard');
+        navigate("/admin");
+      } else {
+        console.log('Redirecting to user dashboard');
+        navigate("/pages/products-list");
+      }
     }
   }, [user, profile, loading, navigate]);
 
