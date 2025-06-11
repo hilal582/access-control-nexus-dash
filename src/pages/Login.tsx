@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -17,14 +16,19 @@ const Login = () => {
   const [loginLoading, setLoginLoading] = useState(false);
 
   useEffect(() => {
-    if (user && profile) {
-      if (profile.is_super_admin) {
-        navigate("/admin");
-      } else {
-        navigate("/pages/products-list");
-      }
+    if (user && !loading) {
+      // Give a small delay to ensure profile is loaded
+      const timer = setTimeout(() => {
+        if (profile?.is_super_admin) {
+          navigate("/admin");
+        } else {
+          navigate("/pages/products-list");
+        }
+      }, 100);
+
+      return () => clearTimeout(timer);
     }
-  }, [user, profile, navigate]);
+  }, [user, profile, loading, navigate]);
 
   const handleLogin = async () => {
     if (!email || !password) {
