@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,7 +35,11 @@ const CreateUserDialog = ({ isOpen, onClose }: CreateUserDialogProps) => {
   };
 
   const generatePassword = () => {
-    const password = Math.random().toString(36).slice(-8) + "A1!";
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
     setFormData(prev => ({ ...prev, password }));
   };
 
@@ -46,7 +49,7 @@ const CreateUserDialog = ({ isOpen, onClose }: CreateUserDialogProps) => {
         <DialogHeader>
           <DialogTitle>Create New User</DialogTitle>
           <DialogDescription>
-            Add a new user to the system. They will receive login credentials via email.
+            Add a new user to the system. A strong password will be auto-generated if not provided.
           </DialogDescription>
         </DialogHeader>
         
@@ -88,25 +91,22 @@ const CreateUserDialog = ({ isOpen, onClose }: CreateUserDialogProps) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">Password (Optional)</Label>
             <Input
               id="password"
               type="text"
               value={formData.password}
               onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-              placeholder="Enter password"
-              required
+              placeholder="Leave empty for auto-generated password"
             />
-          </div>
-
-          <div className="flex items-center justify-between pt-2">
             <Button 
               type="button" 
               variant="outline" 
               onClick={generatePassword}
               size="sm"
+              className="w-full"
             >
-              Generate Password
+              Generate Strong Password
             </Button>
           </div>
 

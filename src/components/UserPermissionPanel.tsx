@@ -1,8 +1,7 @@
-
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +15,7 @@ interface UserPermissionPanelProps {
 }
 
 const UserPermissionPanel = ({ isOpen, onClose, user }: UserPermissionPanelProps) => {
-  const [permissions, setPermissions] = useState<Record<string, string>>({});
+  const [permissions, setPermissions] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(false);
   const { updateUserPermissions } = useUsers();
 
@@ -33,7 +32,7 @@ const UserPermissionPanel = ({ isOpen, onClose, user }: UserPermissionPanelProps
     { key: "finance", name: "Finance & Accounting" }
   ];
 
-  const permissionLevels = ["View", "Edit", "Create", "Delete"];
+  const permissionLevels = ["view", "edit", "create", "delete"];
 
   useEffect(() => {
     if (user?.permissions) {
@@ -41,11 +40,26 @@ const UserPermissionPanel = ({ isOpen, onClose, user }: UserPermissionPanelProps
     }
   }, [user]);
 
-  const handlePermissionChange = (pageKey: string, permission: string) => {
-    setPermissions(prev => ({
-      ...prev,
-      [pageKey]: permission
-    }));
+  const handlePermissionChange = (pageKey: string, permission: string, checked: boolean) => {
+    setPermissions(prev => {
+      const newPermissions = { ...prev };
+      if (!newPermissions[pageKey]) {
+        newPermissions[pageKey] = [];
+      }
+      
+      if (checked) {
+        if (!newPermissions[pageKey].includes(permission)) {
+          newPermissions[pageKey] = [...newPermissions[pageKey], permission];
+        }
+      } else {
+        newPermissions[pageKey] = newPermissions[pageKey].filter(p => p !== permission);
+        if (newPermissions[pageKey].length === 0) {
+          delete newPermissions[pageKey];
+        }
+      }
+      
+      return newPermissions;
+    });
   };
 
   const handleSave = async () => {
@@ -98,29 +112,35 @@ const UserPermissionPanel = ({ isOpen, onClose, user }: UserPermissionPanelProps
         </Card>
 
         {/* Permissions */}
-        <div className="space-y-4">
+        <div className="space-y-6">
           <h3 className="text-lg font-semibold">Page Permissions</h3>
           {pages.map((page) => (
-            <div key={page.key} className="space-y-2">
-              <Label htmlFor={page.key} className="text-sm font-medium">
-                {page.name}
-              </Label>
-              <Select
-                value={permissions[page.key] || "View"}
-                onValueChange={(value) => handlePermissionChange(page.key, value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select permission level" />
-                </SelectTrigger>
-                <SelectContent>
-                  {permissionLevels.map((level) => (
-                    <SelectItem key={level} value={level}>
-                      {level}
-                    </SelectItem>
+            <Card key={page.key}>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">{page.name}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-3">
+                  {permissionLevels.map((permission) => (
+                    <div key={permission} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`${page.key}-${permission}`}
+                        checked={permissions[page.key]?.includes(permission) || false}
+                        onCheckedChange={(checked) => 
+                          handlePermissionChange(page.key, permission, checked as boolean)
+                        }
+                      />
+                      <Label 
+                        htmlFor={`${page.key}-${permission}`}
+                        className="text-sm font-medium capitalize"
+                      >
+                        {permission}
+                      </Label>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
 

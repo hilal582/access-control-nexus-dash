@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import AdminDashboard from "./pages/AdminDashboard";
 import Login from "./pages/Login";
+import PasswordReset from "./pages/PasswordReset";
 import UserPages from "./pages/UserPages";
 import NotFound from "./pages/NotFound";
 import { useAuth } from "./hooks/useAuth";
@@ -14,7 +14,7 @@ import { useAuth } from "./hooks/useAuth";
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children, requireSuperAdmin = false }: { children: React.ReactNode, requireSuperAdmin?: boolean }) => {
-  const { user, profile, loading } = useAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -28,7 +28,7 @@ const ProtectedRoute = ({ children, requireSuperAdmin = false }: { children: Rea
     return <Navigate to="/login" replace />;
   }
 
-  if (requireSuperAdmin && !profile?.is_super_admin) {
+  if (requireSuperAdmin && !user.is_super_admin) {
     return <Navigate to="/pages/products-list" replace />;
   }
 
@@ -41,6 +41,7 @@ const AppContent = () => {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/password-reset" element={<PasswordReset />} />
         <Route 
           path="/admin" 
           element={

@@ -1,13 +1,14 @@
-
 from rest_framework import status, generics, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
-from .models import UserPermission
-from .serializers import UserSerializer, LoginSerializer, CreateUserSerializer, UserPermissionSerializer
-import secrets
-import string
+from .models import UserPermission, PasswordResetOTP
+from .serializers import (
+    UserSerializer, LoginSerializer, CreateUserSerializer, 
+    UserPermissionSerializer, PasswordResetRequestSerializer,
+    PasswordResetVerifySerializer, UpdateProfileSerializer
+)
 
 User = get_user_model()
 
@@ -37,10 +38,31 @@ def refresh_token_view(request):
     except Exception as e:
         return Response({'error': 'Invalid refresh token'}, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def profile_view(request):
+    serializer = UserSerializer(request.user)
+    return Response(serializer.data)
+
+@api_view(['PUT'])
+@permission_classes([permissions.IsAuthenticated])
+def update_profile_view(request):
+    serializer = UpdateProfileSerializer(request.user, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(UserSerializer(request.user).data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 class UserListCreateView(generics.ListCreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
+    
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            # Only super admin can create users
+            return [permissions.IsAuthenticated(), IsSuperAdmin()]
+        return [permissions.IsAuthenticated()]
     
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -48,37 +70,22 @@ class UserListCreateView(generics.ListCreateAPIView):
         return UserSerializer
     
     def create(self, request, *args, **kwargs):
-        # Auto-generate strong password
-        password = self.generate_strong_password()
-        data = request.data.copy()
-        data['password'] = password
-        
-        serializer = self.get_serializer(data=data)
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         
         return Response({
             'user': UserSerializer(user).data,
-            'password': password,
+            'password': getattr(user, '_generated_password', 'Password was provided'),
             'message': 'User created successfully. Password should be sent to user email.'
         }, status=status.HTTP_201_CREATED)
-    
-    def generate_strong_password(self):
-        # Generate 12 character password with uppercase, lowercase, digits, and symbols
-        alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
-        password = ''.join(secrets.choice(alphabet) for i in range(12))
-        return password
 
-class UserPermissionListView(generics.ListAPIView):
-    serializer_class = UserPermissionSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def get_queryset(self):
-        user_id = self.kwargs['user_id']
-        return UserPermission.objects.filter(user_id=user_id)
+class IsSuperAdmin(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.is_super_admin
 
 @api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
+@permission_classes([permissions.IsAuthenticated, IsSuperAdmin])
 def update_user_permissions(request, user_id):
     try:
         user = User.objects.get(id=user_id)
@@ -89,11 +96,19 @@ def update_user_permissions(request, user_id):
         
         # Create new permissions
         for page, permission_list in permissions_data.items():
-            for permission in permission_list:
+            if isinstance(permission_list, list):
+                for permission in permission_list:
+                    UserPermission.objects.create(
+                        user=user,
+                        page=page,
+                        permission=permission.lower()
+                    )
+            else:
+                # Single permission
                 UserPermission.objects.create(
                     user=user,
                     page=page,
-                    permission=permission.lower()
+                    permission=permission_list.lower()
                 )
         
         return Response({'message': 'Permissions updated successfully'})
@@ -104,10 +119,55 @@ def update_user_permissions(request, user_id):
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
-def user_permissions_view(request, user_id):
+def user_permissions_view(request, user_id=None):
     try:
-        permissions = UserPermission.objects.filter(user_id=user_id)
+        if user_id:
+            # Get permissions for specific user (admin only)
+            if not request.user.is_super_admin:
+                return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+            permissions = UserPermission.objects.filter(user_id=user_id)
+        else:
+            # Get permissions for current user
+            permissions = UserPermission.objects.filter(user=request.user)
+            
         serializer = UserPermissionSerializer(permissions, many=True)
         return Response(serializer.data)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated, IsSuperAdmin])
+def all_permissions_view(request):
+    """Get all user permissions for admin dashboard"""
+    permissions = UserPermission.objects.select_related('user').all()
+    serializer = UserPermissionSerializer(permissions, many=True)
+    return Response(serializer.data)
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def password_reset_request(request):
+    serializer = PasswordResetRequestSerializer(data=request.data)
+    if serializer.is_valid():
+        result = serializer.save()
+        return Response(result)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def password_reset_verify(request):
+    serializer = PasswordResetVerifySerializer(data=request.data)
+    if serializer.is_valid():
+        result = serializer.save()
+        return Response(result)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def logout_view(request):
+    try:
+        refresh_token = request.data["refresh"]
+        token = RefreshToken(refresh_token)
+        token.blacklist()
+        return Response({'message': 'Successfully logged out'})
+    except Exception as e:
+        return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)

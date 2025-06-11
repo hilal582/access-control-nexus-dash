@@ -1,37 +1,32 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { signIn, user, profile, loading } = useAuth();
+  const { signIn, user, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
 
   useEffect(() => {
-    console.log('Login useEffect - user:', user, 'profile:', profile, 'loading:', loading);
-    
-    if (user && profile && !loading) {
-      console.log('Redirecting user - is_super_admin:', profile.is_super_admin);
-      
-      if (profile.is_super_admin) {
-        console.log('Redirecting to admin dashboard');
+    if (user && !loading) {
+      if (user.is_super_admin) {
         navigate("/admin");
       } else {
-        console.log('Redirecting to user dashboard');
         navigate("/pages/products-list");
       }
     }
-  }, [user, profile, loading, navigate]);
+  }, [user, loading, navigate]);
 
-  const handleLogin = async () => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     if (!email || !password) {
       toast.error("Please enter both email and password");
       return;
@@ -42,7 +37,6 @@ const Login = () => {
     
     if (result.success) {
       toast.success("Logged in successfully!");
-      // Navigation will be handled by the useEffect above
     } else {
       toast.error(result.error || "Login failed");
     }
@@ -71,7 +65,7 @@ const Login = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -80,7 +74,7 @@ const Login = () => {
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                required
               />
             </div>
             <div className="space-y-2">
@@ -91,16 +85,34 @@ const Login = () => {
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                required
               />
             </div>
             <Button 
+              type="submit"
               className="w-full" 
-              onClick={handleLogin}
               disabled={loginLoading}
             >
               {loginLoading ? "Signing in..." : "Sign In"}
             </Button>
+          </form>
+          
+          <div className="mt-4 text-center">
+            <Link 
+              to="/password-reset" 
+              className="text-sm text-blue-600 hover:text-blue-800"
+            >
+              Forgot your password?
+            </Link>
+          </div>
+          
+          <div className="mt-6 text-center">
+            <Link 
+              to="/" 
+              className="text-sm text-gray-600 hover:text-gray-800"
+            >
+              ← Back to Home
+            </Link>
           </div>
         </CardContent>
       </Card>

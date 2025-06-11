@@ -1,133 +1,74 @@
-
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import type { User } from '@supabase/supabase-js';
+import { authApi, clearTokens, setTokens } from '@/lib/api';
 
-export interface Profile {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
+export interface User {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
   is_super_admin: boolean;
+  created_at: string;
 }
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
+  const loadUser = async () => {
     try {
-      console.log('Fetching profile for user:', userId);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('Error fetching profile:', error);
-        throw error;
-      }
-      
-      console.log('Profile fetched successfully:', data);
-      setProfile(data);
-      return data;
+      const userData = await authApi.getProfile();
+      setUser(userData);
     } catch (error) {
-      console.error('Error fetching profile:', error);
-      setProfile(null);
-      return null;
+      console.error('Failed to load user:', error);
+      clearTokens();
+      setUser(null);
+    } finally {
+      setLoading(false);
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
-      console.log('Attempting to sign in with:', email);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        console.error('Sign in error:', error);
-        throw error;
-      }
-
-      console.log('Sign in successful, user:', data.user);
-      
-      // Fetch profile immediately after successful login
-      if (data.user) {
-        const profileData = await fetchProfile(data.user.id);
-        console.log('Profile loaded after sign in:', profileData);
-      }
-      
+      const response = await authApi.login(email, password);
+      setTokens(response.access, response.refresh);
+      setUser(response.user);
       return { success: true };
     } catch (error: any) {
-      console.error('Sign in failed:', error);
       return { success: false, error: error.message };
     }
   };
 
-  const signOut = async () => {
+  const signOut = () => {
+    authApi.logout();
+    setUser(null);
+  };
+
+  const updateProfile = async (data: { first_name?: string; last_name?: string }) => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      setUser(null);
-      setProfile(null);
-    } catch (error) {
-      console.error('Error signing out:', error);
+      const updatedUser = await authApi.updateProfile(data);
+      setUser(updatedUser);
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
     }
   };
 
   useEffect(() => {
-    // Get initial session
-    const initializeAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        console.log('Initial session:', session);
-        
-        if (session?.user) {
-          setUser(session.user);
-          await fetchProfile(session.user.id);
-        }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initializeAuth();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, 'session:', session);
-        
-        if (session?.user) {
-          setUser(session.user);
-          await fetchProfile(session.user.id);
-        } else {
-          setUser(null);
-          setProfile(null);
-        }
-        
-        setLoading(false);
-      }
-    );
-
-    return () => subscription.unsubscribe();
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      loadUser();
+    } else {
+      setLoading(false);
+    }
   }, []);
 
-  const returnValues = {
+  return {
     user,
-    profile,
     loading,
     signIn,
     signOut,
+    updateProfile,
     isAuthenticated: !!user,
-    isSuperAdmin: profile?.is_super_admin || false
+    isSuperAdmin: user?.is_super_admin || false,
   };
-
-  console.log('useAuth return values:', returnValues);
-  return returnValues;
 };
